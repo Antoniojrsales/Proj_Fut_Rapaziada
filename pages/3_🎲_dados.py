@@ -8,6 +8,16 @@ from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
 from utils.data_processing import process_data
 
+# 1. Garante que o usuário está autenticado logo no topo
+check_login()
+
+# 2. Botão de Logout na Sidebar (Menu Lateral)
+with st.sidebar:
+    st.markdown("---")
+    if st.button("🚪 Sair da Conta", use_container_width=True, type="primary"):
+        st.session_state.clear()
+        st.switch_page("1_🗝️_login.py")
+
 # ---------------------------------------------------------
 # ⚙️ CONFIGURAÇÕES INICIAIS DA INTERFACE (STREAMLIT)
 # ---------------------------------------------------------

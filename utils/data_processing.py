@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 from datetime import datetime
+import streamlit as st
 
 def process_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -110,3 +111,110 @@ def process_data(df: pd.DataFrame) -> pd.DataFrame:
     df.drop(columns=['X_Ks_num', 'X_Fora_num'], inplace=True, errors='ignore')
 
     return df
+
+def render_card(title: str, value, gradient: str, prefix: str = "R$ ", is_currency: bool = True):
+    """
+    Renderiza um card estilizado com gradiente CSS.
+    
+    :param title: Título do Card (ex: "🟢 Lucro Greens")
+    :param value: Valor numérico ou string
+    :param gradient: Cores do gradiente CSS (ex: "#11998e, #38ef7d")
+    :param prefix: Prefixo opcional (default: "R$ ")
+    :param is_currency: Se True, formata como moeda brasileira. Se False, exibe o valor direto.
+    """
+    # Formatação condicional do valor
+    if is_currency and isinstance(value, (int, float)):
+        valor_formatado = f"{prefix}{value:,.2f}".replace(',', 'v').replace('.', ',').replace('v', '.')
+    else:
+        valor_formatado = f"{value}"
+
+    # Estilização CSS do Card
+    card_style = f"""
+        background: linear-gradient(135deg, {gradient});
+        color: white;
+        padding: 18px 20px;
+        border-radius: 12px;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        margin-bottom: 15px;
+    """
+    
+    title_style = """
+        font-size: 0.95em;
+        font-weight: 500;
+        opacity: 0.9;
+        letter-spacing: 0.5px;
+    """
+
+    saldo_style = """
+        font-size: 1.6em;
+        font-weight: 700;
+        margin-top: 6px;
+    """
+
+    st.markdown(f"""
+        <div style="{card_style}">
+            <div style="{title_style}">{title}</div>
+            <div style="{saldo_style}">{valor_formatado}</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+def metricas_gerais(df: pd.DataFrame) -> dict:
+    """
+    Calcula métricas gerais a partir do DataFrame processado.
+    Retorna um dicionário padronizado com os dados para renderização.
+    """
+    # Estrutura base padrão para evitar KeyError na interface
+    base_metrics = {
+        "total_green": 0,
+        "total_red": 0,
+        "total_jogos": 0,
+        "taxa_acerto": 0.0,
+        "total_greens_rs": 0.0,
+        "total_reds_rs": 0.0,
+        "lucro_total": 0.0,
+        "lucro_acumulado": 0.0,
+        "total_pendentes": 0
+    }
+
+    if df is None or df.empty:
+        return base_metrics
+
+    # Considera apenas partidas finalizadas (evita jogos pendentes nas contagens)
+    df_green = df[df['Resultado_Status'] == 'Green']
+    df_red = df[df['Resultado_Status'] == 'Red']
+    df_finalizados = df[df['Resultado_Status'].isin(['Green', 'Red'])]
+    df_pendentes = df[df['Resultado_Status'] == 'Pendente']
+    df_investimento = float(df_finalizados['Stake'].sum()) if not df_finalizados.empty else 0.0
+
+    total_green = len(df_green)
+    total_red = len(df_red)
+    total_jogos = total_green + total_red
+    total_pendentes = len(df_pendentes)
+
+    taxa_acerto = (total_green / total_jogos * 100) if total_jogos > 0 else 0.0
+
+    total_greens_rs = float(df_green['Lucro_R$'].sum()) if not df_green.empty else 0.0
+    total_reds_rs = float(df_red['Lucro_R$'].sum()) if not df_red.empty else 0.0
+    
+    # Soma total apurada nos jogos finalizados
+    lucro_total = float(df['Lucro_R$'].sum())
+    
+    # Resgata o último acumulado se a coluna existir, senão usa o lucro_total
+    lucro_acumulado = float(df['Lucro_Acumulado'].iloc[-1]) if 'Lucro_Acumulado' in df.columns and not df['Lucro_Acumulado'].empty else lucro_total
+
+    roi = (lucro_total / df_investimento * 100) if df_investimento > 0 else 0.0
+
+    return {
+        "total_green": total_green,
+        "total_red": total_red,
+        "total_jogos": total_jogos,
+        "taxa_acerto": taxa_acerto,
+        "total_greens_rs": total_greens_rs,
+        "total_reds_rs": total_reds_rs,
+        "lucro_total": lucro_total,
+        "lucro_acumulado": lucro_acumulado,
+        "total_pendentes": total_pendentes,
+        "investimento_total": df_investimento,
+        "roi": roi
+    }

@@ -91,7 +91,7 @@ if submit:
                 st.success("✅ Login bem-sucedido!")
                 
                 # Exemplo de navegação nativa do Streamlit (descomente e ajuste o caminho da página):
-                # st.switch_page("pages/1_painel.py")
+                st.switch_page("pages/2_🏠_painel.py")
             else:
                 st.warning("⚠️ Planilha vazia ou sem dados válidos.")
     else:

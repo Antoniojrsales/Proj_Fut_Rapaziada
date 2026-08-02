@@ -27,7 +27,7 @@ def get_gspread_client():
             return None, False
     return None, False
 
-@st.cache_data(ttl=600)
+@st.cache_data(ttl=300)
 def load_data(sheet_name, _sheet_client):
     """Carrega dados da planilha para um DataFrame do Pandas."""
     if not _sheet_client:

@@ -6,8 +6,9 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from utils.data_processing import render_card, metricas_gerais
+from utils.data_processing import metricas_gerais
 from utils.auth_check import check_login
+from utils.ui_componentes import render_card
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()

@@ -6,6 +6,7 @@ import pandas as pd
 from datetime import datetime
 from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
+from utils.data_processing import process_data
 
 # ---------------------------------------------------------
 # ⚙️ CONFIGURAÇÕES INICIAIS DA INTERFACE (STREAMLIT)
@@ -138,10 +139,24 @@ with aba2:
         col_timeKs, col_Xks, col_Xfora, col_timefora = st.columns([3, 1.5, 1.5, 3])
         with col_timeKs:
             select_time_ks = st.text_input('🏠 Time Mandante (Time_Ks):', placeholder='Ex: Henan Songshan')
-        with col_Xks:
-            select_x_ks = st.number_input('Gols Mandante:', min_value=0, step=1, value=0)
-        with col_Xfora:
-            select_x_fora = st.number_input('Gols Visitante:', min_value=0, step=1, value=0)
+
+        # No formulário:
+        jogo_finalizado = st.checkbox("Jogo já finalizado?")
+
+        if jogo_finalizado:
+            col_Xks, col_Xfora = st.columns(2)
+            with col_Xks:
+                select_x_ks = st.number_input('Gols Mandante:', min_value=0, step=1, value=0)
+            with col_Xfora:
+                select_x_fora = st.number_input('Gols Visitante:', min_value=0, step=1, value=0)
+            
+            gols_ks_val = str(int(select_x_ks))
+            gols_fora_val = str(int(select_x_fora))
+        else:
+            # Se o jogo é futuro, grava células vazias na planilha
+            gols_ks_val = ""
+            gols_fora_val = ""
+
         with col_timefora:
             select_time_fora = st.text_input('✈️ Time Visitante (Time_Fora):', placeholder='Ex: Dalian Yingbo')
 
@@ -195,8 +210,8 @@ with aba2:
                 select_mercado,
                 select_campeonato.strip(),
                 select_time_ks.strip(),
-                int(select_x_ks),
-                int(select_x_fora),
+                gols_ks_val,
+                gols_fora_val,
                 select_time_fora.strip(),
                 select_odd,
                 stake_formatada

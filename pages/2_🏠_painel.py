@@ -1,12 +1,7 @@
-import sys
-import os
-# Adiciona o diretório raiz ao caminho de busca do Python
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from utils.data_processing import metricas_gerais
+from utils.metrics import metricas_gerais
 from utils.auth_check import check_login
 from utils.ui_componentes import render_card
 

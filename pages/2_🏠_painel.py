@@ -4,6 +4,7 @@ import streamlit as st
 from utils.metrics import metricas_gerais
 from utils.auth_check import check_login
 from utils.ui_componentes import render_card
+from utils.processing_data_lay import processar_regras_lay
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()
@@ -52,7 +53,14 @@ check_login()
 # 2. Atribui os dados à variável local 'df_dados'
 # 3. Emite um aviso caso os dados não sejam localizados
 if 'df_Bi_Fut_Rapaziada' in st.session_state:
+    # 1. Pega os dados brutos da sessão
     df_dados = st.session_state['df_Bi_Fut_Rapaziada']
+
+    # 2. Aplica o processamento das regras de Lay que acabamos de validar no terminal
+    df_dados = processar_regras_lay(df_dados)
+
+    # 3. Atualiza a sessão para que os cards e a tabela recebam os dados atualizados
+    st.session_state['df_Bi_Fut_Rapaziada'] = df_dados
 else:
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
 

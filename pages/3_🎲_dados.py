@@ -7,6 +7,7 @@ from datetime import datetime
 from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
 from utils.data_processing import process_data
+from utils.processing_data_lay import processar_regras_lay
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()
@@ -58,10 +59,19 @@ st.markdown("""
 # 2. Inicializa chaves de controle no session_state para reset de formulários
 # 3. Valida se os dados necessários existem na memória antes de prosseguir
 check_login()
-if 'form_key' not in st.session_state:
-    st.session_state.form_key = 0
 
-df_dados = st.session_state['df_Bi_Fut_Rapaziada'] if 'df_Bi_Fut_Rapaziada' in st.session_state else pd.DataFrame()
+if 'df_Bi_Fut_Rapaziada' in st.session_state:
+    # 1. Pega os dados brutos da sessão
+    df_dados = st.session_state['df_Bi_Fut_Rapaziada']
+
+    # 2. Aplica o processamento das regras de Lay que acabamos de validar no terminal
+    df_dados = processar_regras_lay(df_dados)
+
+    # 3. Atualiza a sessão para que os cards e a tabela recebam os dados atualizados
+    st.session_state['df_Bi_Fut_Rapaziada'] = df_dados
+else:
+    st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
+
 if df_dados.empty:    
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
     st.stop()

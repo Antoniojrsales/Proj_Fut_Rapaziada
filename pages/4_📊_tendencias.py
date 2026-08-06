@@ -79,7 +79,7 @@ if df_dados.empty:
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
     st.stop()
 
-colbarramercados, colbarraacertos = st.columns([1, 1])
+colbarramercados, colbarraacertos = st.columns([2,1])
 
 with colbarramercados:    
     # Usa direto a chave do dicionario retornado pela funcao

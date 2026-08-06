@@ -141,13 +141,14 @@ st.subheader("📈 Métricas Avançadas do Período")
 # 🟢 Linha 3: Os 5 Cards em Colunas
 col6, col7, col8, col9, col10 = st.columns(5)
 with col6:
+    cor_bg = "#00c6ff" if m['porcentagem_banca'] >= 0 else "#cb2d3e"
     # Gradiente Azul Claro
     render_card(
-        title="⚽ Jogos Pendentes",
-        value=f"{m['total_pendentes']} entradas",
-        gradient="#00c6ff, #0072ff",
-        is_currency=False
+        title="🏦 Porcentagem da Banca",
+        value=f"{m['porcentagem_banca']:.2f}%",
+        gradient=f"{cor_bg}, #0072ff",
     )
+
 
 with col7:
     # Gradiente Verde Claro
@@ -156,5 +157,14 @@ with col7:
         title="📈 Retorno Invest. (ROI)",
         value=roi_fmt,
         gradient="#11998e, #38ef7d" if m['roi'] >= 0 else "#cb2d3e, #ef473a",
+        is_currency=False
+    )
+
+with col8:
+    # Gradiente Azul Claro
+    render_card(
+        title="⚽ Jogos Pendentes",
+        value=f"{m['total_pendentes']} entradas",
+        gradient="#ff4e50, #f9d423",
         is_currency=False
     )

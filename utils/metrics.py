@@ -21,6 +21,7 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
         "lucro_acumulado": 0.0,
         "total_pendentes": 0,
         "ranking_mercados": [],
+        "porcentagem_banca": 0.0,
     }
 
     if df is None or df.empty:
@@ -69,6 +70,16 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
     else:
         lista_ranking = []
 
+    # 1. Valor base onde o projeto começou
+    BANCA_INICIAL_BASE = 100.0
+
+    # 4. Porcentagem exata sobre a banca inicial
+    porcentagem_banca = (
+        (lucro_total / BANCA_INICIAL_BASE) * 100
+        if BANCA_INICIAL_BASE > 0
+        else 0.0
+    )
+
     return {
         "total_green": total_green,
         "total_red": total_red,
@@ -81,7 +92,8 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
         "total_pendentes": total_pendentes,
         "investimento_total": df_investimento,
         "roi": roi,
-        "ranking_mercados": lista_ranking
+        "ranking_mercados": lista_ranking,
+        "porcentagem_banca": porcentagem_banca
     }
 
 def grafico_rank_mercados(df: pd.DataFrame) -> None:
@@ -127,7 +139,7 @@ def grafico_rank_mercados(df: pd.DataFrame) -> None:
 
     fig.update_traces(
         textfont=dict(weight="bold", family="Arial", color="black", size=14),
-        textposition="outside",
+        textposition="inside",
         texttemplate="R$ %{x:.2f}",
         cliponaxis=False  
     )

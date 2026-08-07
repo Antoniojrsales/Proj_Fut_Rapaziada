@@ -8,7 +8,7 @@ from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
 from utils.data_processing import process_data
 from utils.processing_data_lay import processar_regras_lay
-from utils.metrics import grafico_rank_mercados, grafico_contagem_mercados, grafico_evolucao_temporal
+from utils.grafics import grafico_rank_mercados, grafico_contagem_mercados, grafico_evolucao_temporal
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()

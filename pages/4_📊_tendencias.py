@@ -8,7 +8,7 @@ from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
 from utils.data_processing import process_data
 from utils.processing_data_lay import processar_regras_lay
-from utils.metrics import grafico_rank_mercados, grafico_contagem_mercados
+from utils.metrics import grafico_rank_mercados, grafico_contagem_mercados, grafico_evolucao_temporal
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()
@@ -42,19 +42,6 @@ def local_css(file_name):
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.markdown("""
-<div style="
-    padding: 5px;
-    text-align: center;">
-    <h2 style=" font-size: 40px; 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">
-                Tendências | Dados Futebol Rapaziada</h2>
-    <div id="chart-container" style="color:'blue'"></div>
-</div>
-""", unsafe_allow_html=True)
-
-st.markdown("---")
-
 # ---------------------------------------------------------
 # 🔐 SEGURANÇA E CONTROLE DE SESSÃO
 # ---------------------------------------------------------
@@ -79,6 +66,9 @@ if df_dados.empty:
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
     st.stop()
 
+st.markdown("<h3 style='text-align: center;'>📊 Tendências de Mercados e Acertos</h3>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; margin: 0; padding: 10px; margin-bottom: 20px;'>Gráficos que mostram a distribuição dos ganhos e perdas acumuladas por mercado e a porcentagem de acertos e erros, permitindo identificar quais mercados apresentam melhor desempenho.</p>", unsafe_allow_html=True)
+
 colbarramercados, colbarraacertos = st.columns([2,1])
 
 with colbarramercados:    
@@ -87,5 +77,14 @@ with colbarramercados:
 
 with colbarraacertos:
     grafico_contagem_mercados(st.session_state["df_Bi_Fut_Rapaziada"])
+
+st.markdown("---")
+
+coltemporal= st.columns(1)[0]
+
+with coltemporal:
+    st.markdown("<h3 style='text-align: center;'>📈 Evolução Temporal do Lucro Líquido</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Gráfico que mostra a evolução do lucro líquido ao longo do tempo, permitindo identificar tendências e padrões.</p>", unsafe_allow_html=True)
+    grafico_evolucao_temporal(st.session_state["df_Bi_Fut_Rapaziada"])
 
 st.markdown("---")

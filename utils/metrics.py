@@ -211,3 +211,95 @@ def grafico_contagem_mercados(df: pd.DataFrame) -> None:
     )
 
     st.plotly_chart(fig, width='stretch', config={"displayModeBar": False})
+
+def grafico_evolucao_temporal(df: pd.DataFrame) -> None:
+    """Renderiza a linha do tempo do Lucro Acumulado com Plotly."""
+    if df is None or df.empty:
+        st.warning("Sem dados para gerar o gráfico.")
+        return
+
+    # 1. Filtra apenas jogos concluídos
+    df_finalizados = df[
+        df["Resultado_Status"].isin(["Green", "Red"])
+    ].copy()
+
+    if df_finalizados.empty:
+        st.warning("Não há jogos finalizados.")
+        return
+
+    # 2. Converte a data e agrupa o lucro total por dia
+    df_finalizados["Data_Dia"] = pd.to_datetime(
+        df_finalizados["Data"]
+    ).dt.date
+    df_diario = (
+        df_finalizados.groupby("Data_Dia")
+        .agg(Lucro_Diario=("Lucro_R$", "sum"))
+        .reset_index()
+    )
+
+    # 3. Calcula a evolução do Lucro ACUMULADO dia a dia
+    df_diario = df_diario.sort_values(by="Data_Dia").reset_index(drop=True)
+    df_diario["Lucro_Acumulado"] = df_diario["Lucro_Diario"].cumsum()
+    df_diario["Data_Str"] = pd.to_datetime(df_diario["Data_Dia"]).dt.strftime(
+        "%d/%m/%Y"
+    )
+
+    # 4. Define as cores dinâmicas com base no SALDO FINAL ACUMULADO
+    ultimo_lucro = df_diario["Lucro_Acumulado"].iloc[-1]
+    cor_linha = "#00C04D" if ultimo_lucro >= 0 else "#FF4B4B"
+    cor_preenchimento = (
+        "rgba(0, 192, 77, 0.1)"
+        if ultimo_lucro >= 0
+        else "rgba(255, 75, 75, 0.15)"
+    )
+
+    # 5. Renderiza o Gráfico com o Lucro Acumulado no eixo Y
+    fig = px.line(
+        df_diario,
+        x="Data_Str",
+        y="Lucro_Acumulado",
+        markers=True,
+        text=df_diario["Lucro_Acumulado"].apply(lambda x: f"R$ {x:.2f}"),
+    )
+
+    # 6. Atualiza Traços
+    fig.update_traces(
+        mode="lines+markers+text",
+        line=dict(color=cor_linha, width=3, shape="spline"),
+        marker=dict(size=6, color=cor_linha),
+        fill="tozeroy",
+        fillcolor=cor_preenchimento,
+        hovertemplate="<b>Data:</b> %{x}<br><b>Lucro Acumulado:</b> R$ %{y:.2f}<extra></extra>",
+        textposition="top center",
+        cliponaxis=False,
+        textfont=dict(family="Arial", size=12, color="black"),
+    )
+
+    # 7. Layout e Navegação
+    fig.update_layout(
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        xaxis_title="Data",
+        yaxis_title="Lucro Acumulado (R$)",
+        height=400,
+        margin=dict(t=30, b=40, l=60, r=80),
+        xaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(200, 200, 200, 0.2)",
+        ),
+        yaxis=dict(
+            showgrid=True,
+            gridcolor="rgba(200, 200, 200, 0.2)",
+            tickprefix="R$ ",
+            tickformat=",.2f",
+            autorange=True,
+            fixedrange=False,
+        ),
+    )
+
+    st.plotly_chart(
+        fig,
+        width="stretch",
+        config={"displayModeBar": True, "scrollZoom": True},
+    )

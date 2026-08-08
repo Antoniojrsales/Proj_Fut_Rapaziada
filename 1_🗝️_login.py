@@ -16,7 +16,21 @@ st.set_page_config(
     layout="centered"
 )
 
+with st.sidebar:
+    with st.expander("ℹ️ Sobre o Sistema"):
+        st.markdown(
+            """
+            Plataforma de análise para acompanhamento de desempenho, tendências e métricas do Mercado da Bola Mundial.
+
+            **Mercados Analisados:**
+            * **Over 0.5:** Entrada para +0.5 gols na partida (retorno até 3%).
+            * **Under 6.5:** Entrada para -6.5 gols na partida (retorno até 3%).
+            * **Lay ao Placar:** Contra um placar específico (stake base de R$ 1,00).
+            """
+        )
+
 st.sidebar.markdown('Desenvolvido por [AntonioJrSales](https://antoniojrsales.github.io/meu_portfolio/)')
+
 
 # ---------------------------------------------------------
 # 🎨 UTILITÁRIOS DE ESTILIZAÇÃO (CSS)

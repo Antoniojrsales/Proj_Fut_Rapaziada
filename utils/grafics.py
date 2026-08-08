@@ -210,3 +210,62 @@ def grafico_evolucao_temporal(df: pd.DataFrame) -> None:
         width="stretch",
         config={"displayModeBar": True, "scrollZoom": True},
     )
+
+def jogos_dia_seguinte(df: pd.DataFrame) -> pd.DataFrame:
+    """Filtra os jogos pendentes e renderiza a tabela no Streamlit."""
+    if df is None or df.empty:
+        st.warning("Sem dados para gerar a tabela de jogos pendentes.")
+        return pd.DataFrame()
+
+    # 1. Filtra jogos pendentes (sem resultado definitivo)
+    df_pendentes = df[
+        (df["Resultado_Status"] == "Pendente")
+        | (df["Resultado_Status"].isna())
+        | (df["Resultado_Status"] == "")
+    ].copy()
+
+    if df_pendentes.empty:
+        st.info("Nenhum jogo pendente encontrado.")
+        return pd.DataFrame()
+
+    # 2. Converte para datetime e ordena se a coluna existir
+    if "Data" in df_pendentes.columns:
+        df_pendentes["Data"] = pd.to_datetime(df_pendentes["Data"])
+        df_pendentes = df_pendentes.sort_values(by="Data")
+
+    # 3. Seleciona apenas as colunas de exibição existentes
+    colunas_desejadas = [
+        "Data",
+        "Campeonato",
+        "Mercado",
+        "Lay_placar",
+        "Time_Ks",
+        "X_Ks",
+        "X_Fora",
+        "Time_Fora",
+        "Odd %",
+        "Stake",
+    ]
+    colunas_exibicao = [
+        col for col in colunas_desejadas if col in df_pendentes.columns
+    ]
+
+    df_exibicao = df_pendentes[colunas_exibicao]
+
+    # 4. Renderiza a tabela no Streamlit
+    st.dataframe(
+        df_exibicao,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Data": st.column_config.DatetimeColumn(
+                "Data e Hora", format="DD/MM/YYYY HH:mm"
+            ),
+            "Odd": st.column_config.NumberColumn("Odd", format="%.2f"),
+            "Stake_R$": st.column_config.NumberColumn(
+                "Stake", format="R$ %.2f"
+            ),
+        },
+    )
+
+    return df_exibicao

@@ -8,6 +8,7 @@ from utils.auth_check import check_login
 from utils.db_connector import get_gspread_client, append_row, load_data
 from utils.data_processing import process_data
 from utils.processing_data_lay import processar_regras_lay
+from utils.grafics import jogos_dia_seguinte
 
 # 1. Garante que o usuário está autenticado logo no topo
 check_login()
@@ -41,16 +42,6 @@ def local_css(file_name):
     with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.markdown("""
-<div style="
-    padding: 5px;
-    text-align: center;">
-    <h2 style=" font-size: 40px; 
-                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">
-                Visualização dos Dados | Dados Futebol Rapaziada</h2>
-    <div id="chart-container" style="margin-bottom: 30px; color:'blue'"></div>
-</div>
-""", unsafe_allow_html=True)
 
 # ---------------------------------------------------------
 # 🔐 SEGURANÇA E CONTROLE DE SESSÃO
@@ -76,12 +67,23 @@ if df_dados.empty:
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
     st.stop()
 
+aba1 = st.columns(1)[0]
+#Criando uma tabela para visualizar os jogos do dia seguinte
+with aba1:
+    st.markdown("<h3 style='text-align: center;'>⚽ Jogos do Dia Seguinte</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; margin: 0; padding: 10px; margin-bottom: 20px;'>Tabela que mostra os dados dos jogos do dia seguinte incluindo informações como data, mercado, campeonato, times, placar, odd e stake</p>", unsafe_allow_html=True)
+
+    # Exibe a tabela com os dados dos jogos do dia seguinte
+    jogos_dia_seguinte(df_dados)
+
+st.markdown("<br>", unsafe_allow_html=True)
+
 # ---------------------------------------------------------
 # 📑 ESTRUTURA DE NAVEGAÇÃO (TABS)
 # ---------------------------------------------------------
 # 1. Cria as abas de 'Dados Brutos' e 'Inserção'
 # 2. Aplica o arquivo de estilos CSS local
-aba1, aba2 = st.tabs(['Dados Brutos', 'Inserindo Dados na base'])
+aba2, aba3 = st.tabs(['Dados Brutos', 'Inserindo Dados na base'])
 local_css("style.css")
 
 # ---------------------------------------------------------
@@ -90,7 +92,10 @@ local_css("style.css")
 # 1. Filtros laterais para selecionar colunas e tipo de visualização (Top/Bottom)
 # 2. Aplica configurações de formatação de moeda (R$) na coluna de valores
 # 3. Exibe o resumo quantitativo (linhas e colunas) do dataset
-with aba1:
+with aba2:
+    st.markdown("<h3 style='text-align: center;'>🎲 Visualização dos Dados</h3>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; margin: 0; padding: 10px; margin-bottom: 20px;'>Tabela que mostra os dados brutos de jogos, incluindo informações como data, mercado, campeonato, times, placar, odd e stake e metricas para análise.</p>", unsafe_allow_html=True)
+
     with st.sidebar.expander("🔍 Visualizar colunas"):
         options = st.multiselect('Escolha a Coluna:', df_dados.columns, default=list(df_dados.columns))
 
@@ -126,7 +131,7 @@ with aba1:
 # ---------------------------------------------------------
 # 📝 ABA 2: FORMULÁRIO DE ENTRADA DE DADOS
 # ---------------------------------------------------------
-with aba2:
+with aba3:
     st.subheader("➕ Adicionar Nova Entrada de Jogo")
     st.write("Preencha os dados da partida para atualizar a base do Google Sheets.")
 

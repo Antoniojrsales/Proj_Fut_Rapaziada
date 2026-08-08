@@ -31,6 +31,7 @@ st.set_page_config(
     page_icon="📊",
     layout="wide"
 )
+
 st.sidebar.markdown('Desenvolvido por [AntonioJrSales](https://antoniojrsales.github.io/meu_portfolio/)')
 
 # ---------------------------------------------------------
@@ -78,7 +79,8 @@ with colbarramercados:
 with colbarraacertos:
     grafico_contagem_mercados(st.session_state["df_Bi_Fut_Rapaziada"])
 
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
 
 coltemporal= st.columns(1)[0]
 
@@ -87,4 +89,3 @@ with coltemporal:
     st.markdown("<p style='text-align: center;'>Gráfico que mostra a evolução do lucro líquido ao longo do tempo, permitindo identificar tendências e padrões.</p>", unsafe_allow_html=True)
     grafico_evolucao_temporal(st.session_state["df_Bi_Fut_Rapaziada"])
 
-st.markdown("---")

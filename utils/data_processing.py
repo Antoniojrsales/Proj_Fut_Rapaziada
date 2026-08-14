@@ -97,12 +97,14 @@ def process_data(df: pd.DataFrame) -> pd.DataFrame:
 
     # 🎯 Regras de Negócio: Status Padrão (Over / Under)
     cond_over = (df['Mercado'] == 'Over0.5_3porc') & (df['Gols'] > 0)
+    cond_over15 = (df['Mercado'] == 'Over1.5_15porc') & (df['Gols'] > 1)
     cond_under = (df['Mercado'] == 'Under6.5_3porc') & (df['Gols'] <= 6)
+    
 
     df['Resultado_Status'] = np.where(
         ~tem_placar,
         'Pendente',
-        np.where(cond_over | cond_under, 'Green', 'Red'),
+        np.where(cond_over | cond_under | cond_over15, 'Green', 'Red'),
     )
 
     # 💰 Cálculo do Lucro Padrão (Over / Under)

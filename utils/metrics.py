@@ -22,6 +22,7 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
         "total_pendentes": 0,
         "ranking_mercados": [],
         "porcentagem_banca": 0.0,
+        "media_over0.5": 0.0,
     }
 
     if df is None or df.empty:
@@ -71,14 +72,13 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
         lista_ranking = []
 
     # 1. Valor base onde o projeto começou
-    BANCA_INICIAL_BASE = 100.0
+    BANCA_INICIAL_BASE = 110.0
 
     # 4. Porcentagem exata sobre a banca inicial
-    porcentagem_banca = (
-        (lucro_total / BANCA_INICIAL_BASE) * 100
-        if BANCA_INICIAL_BASE > 0
-        else 0.0
+    porcentagem_banca = ((lucro_total / BANCA_INICIAL_BASE) * 100 if BANCA_INICIAL_BASE > 0 else 0.0
     )
+
+    media_over05 = df_finalizados[df_finalizados['Mercado'] == 'Over0.5_3porc'].groupby('Stake')['Stake'].sum().mean()
 
     return {
         "total_green": total_green,
@@ -93,6 +93,217 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
         "investimento_total": df_investimento,
         "roi": roi,
         "ranking_mercados": lista_ranking,
-        "porcentagem_banca": porcentagem_banca
+        "porcentagem_banca": porcentagem_banca,
+        "media_over0.5": media_over05,
     }
 
+def media_por_mercados(df: pd.DataFrame) -> dict:
+    """Calcula ROI, Lucro, Stake Média, Drawdown e Sequências agrupados por mercado."""
+    if df is None or df.empty:
+        return {}
+
+    # 1. Filtra apenas jogos finalizados
+    df_finalizados = df[
+        df["Resultado_Status"].isin(["Green", "Red"])
+    ].copy()
+
+    if df_finalizados.empty:
+        return {}
+
+    col_data = (
+        "Data" if "Data" in df_finalizados.columns else df_finalizados.columns[0]
+    )
+    col_stake = "Stake_R$" if "Stake_R$" in df_finalizados.columns else "Stake"
+
+    metricas_mercados = {}
+
+    # Itera por mercado calculando métricas financeiras e curva de risco/drawdown
+    for mercado, grupo in df_finalizados.groupby("Mercado"):
+        # Garante ordenação cronológica para o Drawdown
+        grupo_ord = grupo.sort_values(by=col_data).copy()
+
+        invest = float(grupo_ord[col_stake].sum())
+        lucro = float(grupo_ord["Lucro_R$"].sum())
+        total_jogos = len(grupo_ord)
+        stake_med = (
+            float(grupo_ord[col_stake].mean()) if total_jogos > 0 else 0.0
+        )
+        roi = float((lucro / invest * 100) if invest > 0 else 0.0)
+
+        # Curva de Drawdown
+        lucro_acumulado = grupo_ord["Lucro_R$"].cumsum()
+        pico_historico = lucro_acumulado.cummax()
+        drawdown_r = lucro_acumulado - pico_historico
+        max_dd_reais = abs(
+            float(drawdown_r.min())
+        )  # Valor absoluto do maior fundo
+
+        # Sequência contínua de jogos em Drawdown (Recuperação)
+        em_dd = (drawdown_r < 0).astype(int)
+        grupos_dd = (em_dd != em_dd.shift()).cumsum() * em_dd
+        jogos_em_dd = (
+            int(grupos_dd.value_counts().drop(0, errors="ignore").max())
+            if (em_dd == 1).any()
+            else 0
+        )
+
+        # Sequência máxima de Reds Consecutivos
+        is_red = (grupo_ord["Resultado_Status"] == "Red").astype(int)
+        grupos_red = (is_red != is_red.shift()).cumsum() * is_red
+        max_reds = (
+            int(grupos_red.value_counts().drop(0, errors="ignore").max())
+            if (is_red == 1).any()
+            else 0
+        )
+
+        metricas_mercados[mercado] = {
+            "jogos": total_jogos,
+            "investimento": invest,
+            "lucro": lucro,
+            "stake_media": stake_med,
+            "roi": roi,
+            "max_dd_reais": max_dd_reais,
+            "jogos_em_dd": jogos_em_dd,
+            "max_reds": max_reds,
+        }
+
+    return metricas_mercados
+
+def renderizar_cards_metricas_mercados(df: pd.DataFrame) -> None:
+    """Renderiza os cards visuais fiéis à sugestão da imagem."""
+    dados_mercados = media_por_mercados(df)
+
+    if not dados_mercados:
+        st.info("Nenhum dado consolidado por mercado para exibir.")
+        return
+
+    colunas = st.columns(len(dados_mercados))
+
+    for col, (mercado, dados) in zip(colunas, dados_mercados.items()):
+        roi_val = dados["roi"]
+        lucro_val = dados["lucro"]
+
+        with col:
+            st.markdown(
+                    f"""
+                    <div style="background-color: {"#4a00e0"}; padding: 8px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                            <span style="font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
+                                📊 {mercado}
+                            </span>
+                            <span style="font-size: 0.9rem; font-weight: 700; padding: 2px 8px; border-radius: 6px;">
+                                Max DD: -R$ {dados['max_dd_reais']:.2f}
+                            </span>
+                        </div>
+                        <div style="font-size: 1rem; font-weight: 800; line-height: 1.2; margin-bottom: 10px;">
+                            🎯ROI: {roi_val:+.2f}%
+                        </div>
+                        <div style="border-top: 1px solid #f1f5f9; padding-top: 8px; font-size: 0.9rem; display: flex; justify-content: space-between;">
+                            <span>💸Lucro: <b>R$ {lucro_val:.2f}</b></span>
+                            <span>💸Stake Méd.: <b>R$ {dados['stake_media']:.2f}</b></span>
+                        </div>
+                        <div style="padding-top: 5px; font-size: 0.9rem; display: flex; justify-content: space-between;">
+                            <span>Max Reds Seguidos: <b>{dados['max_reds']}</b></span>
+                            <span>Jogos em DD: <b>{dados['jogos_em_dd']}</b></span>
+                        </div>    
+                        <div style="margin-top: 10px; padding-top: 4px; border-top: 1px dashed #f1f5f9; font-size: 0.9rem; text-align: right;">
+                            {dados['jogos']} jogos analisados
+                        </div>                        
+                    </div>
+                    """,
+                    unsafe_allow_html=True,)
+
+def calcular_drawdown(
+    df: pd.DataFrame, coluna_lucro: str = "Lucro_R$", coluna_data: str = "Data"
+) -> dict:
+    """Calcula métricas de Drawdown Histórico (Máximo) e Drawdown Atual (Momento Presente).
+
+    Funciona tanto para o DataFrame geral quanto para um mercado filtrado.
+    """
+    padrao = {
+        "max_dd_reais": 0.0,
+        "max_dd_perc": 0.0,
+        "jogos_em_dd": 0,
+        "max_reds_seguidos": 0,
+        "pico_historico": 0.0,
+        "dd_atual_reais": 0.0,
+        "dd_atual_perc": 0.0,
+        "em_dd_agora": False,
+    }
+
+    if df is None or df.empty:
+        return padrao
+
+    # 1. Filtra apenas jogos finalizados
+    df_finalizados = df[
+        df["Resultado_Status"].isin(["Green", "Red"])
+    ].copy()
+    if df_finalizados.empty:
+        return padrao
+
+    # 2. Garante ordenação cronológica
+    if coluna_data in df_finalizados.columns:
+        df_ord = df_finalizados.sort_values(by=coluna_data).copy()
+    else:
+        df_ord = df_finalizados.copy()
+
+    # 3. Curva Acumulada e Picos Históricos
+    serie_acumulada = df_ord[coluna_lucro].cumsum()
+    picos = serie_acumulada.cummax()
+    curva_dd = serie_acumulada - picos
+
+    # === DRAWDOWN HISTÓRICO MÁXIMO ===
+    max_dd_reais = abs(float(curva_dd.min()))
+    pico_max = float(picos.max())
+
+    max_dd_perc = (
+        float((max_dd_reais / pico_max) * 100)
+        if pico_max and pico_max > 0
+        else 0.0
+    )
+
+    # === DRAWDOWN ATUAL (MOMENTO PRESENTE) 👉 NOVO BLOCO ===
+    ultimo_lucro = float(serie_acumulada.iloc[-1])
+    ultimo_pico = float(picos.iloc[-1])
+    dd_atual_reais = abs(float(ultimo_lucro - ultimo_pico))
+
+    dd_atual_perc = (
+        float((dd_atual_reais / ultimo_pico) * 100)
+        if ultimo_pico and ultimo_pico > 0
+        else 0.0
+    )
+    em_dd_agora = dd_atual_reais > 0
+
+    # 4. Sequência Máxima de Jogos em Drawdown Contínuo
+    em_dd = (curva_dd < 0).astype(int)
+    grupos_dd = (em_dd != em_dd.shift()).cumsum() * em_dd
+    jogos_em_dd = (
+        int(grupos_dd.value_counts().drop(0, errors="ignore").max())
+        if (em_dd == 1).any()
+        else 0
+    )
+
+    # 5. Sequência Máxima de Reds Consecutivos
+    col_status = (
+        "Resultado_Status"
+        if "Resultado_Status" in df_ord.columns
+        else "Resultado"
+    )
+    is_red = (df_ord[col_status] == "Red").astype(int)
+    grupos_red = (is_red != is_red.shift()).cumsum() * is_red
+    max_reds = (
+        int(grupos_red.value_counts().drop(0, errors="ignore").max())
+        if (is_red == 1).any()
+        else 0
+    )
+
+    return {
+        "max_dd_reais": max_dd_reais,
+        "max_dd_perc": max_dd_perc,
+        "jogos_em_dd": jogos_em_dd,
+        "max_reds_seguidos": max_reds,
+        "pico_historico": pico_max,
+        "dd_atual_reais": dd_atual_reais,  # 👈 Retorno Atual
+        "dd_atual_perc": dd_atual_perc,  # 👈 Retorno Atual
+        "em_dd_agora": em_dd_agora,  # 👈 Retorno Atual
+    }

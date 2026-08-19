@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from utils.metrics import metricas_gerais
+from utils.metrics import metricas_gerais, renderizar_cards_metricas_mercados, calcular_drawdown
 from utils.auth_check import check_login
 from utils.ui_componentes import render_card
 from utils.processing_data_lay import processar_regras_lay
@@ -35,14 +35,6 @@ st.sidebar.markdown('Desenvolvido por [AntonioJrSales](https://antoniojrsales.gi
 # 1. Renderiza o título principal centralizado via HTML
 # 2. Aplica fontes personalizadas e espaçamentos
 # 3. Executa a verificação de autenticação do usuário
-st.markdown("""
-<div style="padding: 5px; text-align: center;">
-    <h2 style=" font-size: 40px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">
-        Painel Geral | Futebol Rapaziada
-    </h2>
-    <div id="chart-container" style="margin-bottom: 30px; color:'blue'"></div>
-</div>
-""", unsafe_allow_html=True)
 
 check_login()
 
@@ -64,107 +56,104 @@ if 'df_Bi_Fut_Rapaziada' in st.session_state:
 else:
     st.warning("Dados não encontrados na sessão. Por favor, faça login novamente.")
 
-banca = 100
+banca = 110
 m = metricas_gerais(df_dados)
 
-st.subheader("📌 Resumo Geral da Banca")
-
-colbanca, colgr, colvazio2, clovazio3 = st.columns([3, 2, 3, 2])
-# 🟢 Linha 1: Card em Destaque (Banca / Lucro Total)
-# Gradiente Azul Escuro -> Roxo
-with colbanca:
+st.subheader("📌 Resumo Geral da Banca (Lucro liquido, ROI, Contagem Green/Reds, Mercados)")
+col_banca, col_lucro, col_roi, col_green, col_red = st.columns([1.6, 1, .8, .8, .8])
+with col_banca:
     render_card(
         title="💰 BANCA ATUAL (ou Saldo Atual)",
         value= banca + (m['lucro_total']),
         gradient="#2b5876, #4e4376"
     )
 
-with colgr:
-    render_card(
-        title="📈 LUCRO / PREJUÍZO LÍQUIDO",
-        value=m['lucro_total'],
-        gradient="#4e4376, #2b5876"
-    )
+with col_lucro:
+    st.markdown(
+            f"""
+            <div style="background-color: {"#4a00e0"}; padding: 4px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;">
+                    📈 LUCRO / PREJUÍZO LÍQUIDO'
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;">
+                   R$ {m['lucro_total']:.2f}
+                </h4>
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;">
+                    🏦 Porcentagem da Banca
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;">
+                    {m['porcentagem_banca']:.2f}%
+                </h4>
+            </div>
+            """,
+            unsafe_allow_html=True,)
 
-st.markdown("---")
-
-st.subheader("📊 Métricas Gerais do Período")
-
-# 🟢 Linha 2: Os 4 Cards em Colunas
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    # Gradiente Verde
-    render_card(
-        title="🟢 Lucro Greens",
-        value=m['total_greens_rs'],
-        gradient="#11998e, #38ef7d"
-    )
-
-with col2:
-    # Gradiente Vermelho
-    render_card(
-        title="🔴 Prejuízo Reds",
-        value=m['total_reds_rs'],
-        gradient="#cb2d3e, #ef473a"
-    )
-
-with col3:
-    # Gradiente Azul (Sem formatação R$)
-    render_card(
-        title="✅ Qtd. Greens",
-        value=f"{m['total_green']} entradas",
-        gradient="#2193b0, #6dd5ed",
-        is_currency=False
-    )
-
-with col4:
-    # Gradiente Laranja/Escuro (Sem formatação R$)
-    render_card(
-        title="❌ Qtd. Reds",
-        value=f"{m['total_red']} entradas",
-        gradient="#ff4e50, #f9d423",
-        is_currency=False
-    )
-
-with col5:
-    # Gradiente Roxo (Sem formatação R$)
-    render_card(
-        title="🎯 Taxa de Acerto",
-        value=f"{m['taxa_acerto']:.2f}%",
-        gradient="#8e2de2, #4a00e0",
-        is_currency=False
-    )
-
-st.markdown("---")
-
-st.subheader("📈 Métricas Avançadas do Período")
-# 🟢 Linha 3: Os 5 Cards em Colunas
-col6, col7, col8, col9, col10 = st.columns(5)
-with col6:
-    cor_bg = "#00c6ff" if m['porcentagem_banca'] >= 0 else "#cb2d3e"
-    # Gradiente Azul Claro
-    render_card(
-        title="🏦 Porcentagem da Banca",
-        value=f"{m['porcentagem_banca']:.2f}%",
-        gradient=f"{cor_bg}, #0072ff",
-    )
-
-
-with col7:
-    # Gradiente Verde Claro
+cd = calcular_drawdown(df_dados)
+with col_roi:
     roi_fmt = f"{m['roi']:.2f}%".replace('.', ',')
-    render_card(
-        title="📈 Retorno Invest. (ROI)",
-        value=roi_fmt,
-        gradient="#11998e, #38ef7d" if m['roi'] >= 0 else "#cb2d3e, #ef473a",
-        is_currency=False
-    )
+    st.markdown(
+            f"""
+            <div style="background-color: {"#26971d"}; padding: 4px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
+                    💸ROI: {roi_fmt}
+                </h4>
+                <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
+                    Drawdown atual: R$ {cd['dd_atual_reais']}
+                </h4>
+                <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
+                    Drawdown %: {cd['dd_atual_perc']:.1f}%
+                </h4>
+                <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
+                    🎯Taxa acerto: {m['taxa_acerto']}%
+                </h4>
+                <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
+                    ⚽Jogos Pendentes: {m['total_pendentes']}
+                </h4>
+            </div>
+            """,
+            unsafe_allow_html=True,)
 
-with col8:
-    # Gradiente Azul Claro
-    render_card(
-        title="⚽ Jogos Pendentes",
-        value=f"{m['total_pendentes']} entradas",
-        gradient="#ff4e50, #f9d423",
-        is_currency=False
-    )
+with col_green:
+    st.markdown(
+            f"""
+            <div style="background-color: {"#10B981"}; padding: 4px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;">
+                    🟢 Lucro Greens
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;">
+                    R$ {m['total_greens_rs']:.2f}
+                </h4>
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;">
+                    🔴 Prejuízo Reds
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;">
+                    R$ {m['total_reds_rs']:.2f}
+                </h4>
+            </div>
+            """,
+            unsafe_allow_html=True,)
+
+with col_red:
+    st.markdown(
+            f"""
+            <div style="background-color: {"#ff4e50"}; padding: 4px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;"">
+                    ✅ Qtd. Greens
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;"">
+                    {m['total_green']} entry
+                </h4>
+                <p style="margin: 0; font-size: 0.9rem; font-weight: bold; text-transform: uppercase; text-align: center; padding: 3px;"">
+                    ✖️ Qtd. Reds
+                </p>
+                <h4 style="margin: 5px 0 0 0; font-size: 1.2rem; font-weight: bold; text-align: center; padding: 3px;"">
+                    {m['total_red']} entry
+                </h4>
+            </div>
+            """,
+            unsafe_allow_html=True,)
+    
+
+renderizar_cards_metricas_mercados(df_dados)
+
+

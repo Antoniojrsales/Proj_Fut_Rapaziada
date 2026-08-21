@@ -98,13 +98,13 @@ with col_roi:
                     💸ROI: {roi_fmt}
                 </h4>
                 <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
-                    Drawdown atual: R$ {cd['dd_atual_reais']}
+                    Drawdown atual: R$ {cd['dd_atual_reais']:.2f}
                 </h4>
                 <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
                     Drawdown %: {cd['dd_atual_perc']:.1f}%
                 </h4>
                 <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
-                    🎯Taxa acerto: {m['taxa_acerto']}%
+                    🎯Taxa acerto: {m['taxa_acerto']:.2f}%
                 </h4>
                 <h4 style="margin: 5px 0 0 0; font-size: 1rem; font-weight: bold; padding: 3px;">
                     ⚽Jogos Pendentes: {m['total_pendentes']}

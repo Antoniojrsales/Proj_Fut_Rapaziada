@@ -186,7 +186,7 @@ def renderizar_cards_metricas_mercados(df: pd.DataFrame) -> None:
         with col:
             st.markdown(
                     f"""
-                    <div style="background-color: {"#4a00e0"}; padding: 8px; border-radius: 10px; color: white; margin-bottom: 10px;">
+                    <div style="background: linear-gradient(135deg, #202d47 0%, #273b5c 100%); padding: 8px; border-radius: 10px; color: white; margin-bottom: 10px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
                             <span style="font-weight: 700; font-size: 1.2rem; text-transform: uppercase;">
                                 📊 {mercado}
@@ -213,31 +213,33 @@ def renderizar_cards_metricas_mercados(df: pd.DataFrame) -> None:
                     """,
                     unsafe_allow_html=True,)
 
-def calcular_drawdown(
-    df: pd.DataFrame, coluna_lucro: str = "Lucro_R$", coluna_data: str = "Data"
-) -> dict:
+def calcular_drawdown(df: pd.DataFrame, 
+                      coluna_lucro: str = "Lucro_R$", 
+                      coluna_data: str = "Data",
+                      banca_inicial: float = 110.0) -> dict:
     """Calcula métricas de Drawdown Histórico (Máximo) e Drawdown Atual (Momento Presente).
 
     Funciona tanto para o DataFrame geral quanto para um mercado filtrado.
     """
     padrao = {
         "max_dd_reais": 0.0,
-        "max_dd_perc": 0.0,
+        "max_dd_perc_banca": 0.0,
+        "pico_banca": banca_inicial,
+        "pico_lucro": 0.0,
+        "dd_atual_reais": 0.0,
+        "dd_atual_perc_banca": 0.0,
+        "dd_atual_perc_lucro": 0.0,
+        "em_dd_agora": False,
         "jogos_em_dd": 0,
         "max_reds_seguidos": 0,
-        "pico_historico": 0.0,
-        "dd_atual_reais": 0.0,
-        "dd_atual_perc": 0.0,
-        "em_dd_agora": False,
     }
 
     if df is None or df.empty:
         return padrao
 
     # 1. Filtra apenas jogos finalizados
-    df_finalizados = df[
-        df["Resultado_Status"].isin(["Green", "Red"])
-    ].copy()
+    df_finalizados = df[df["Resultado_Status"].isin(["Green", "Red"])].copy()
+
     if df_finalizados.empty:
         return padrao
 
@@ -249,61 +251,53 @@ def calcular_drawdown(
 
     # 3. Curva Acumulada e Picos Históricos
     serie_acumulada = df_ord[coluna_lucro].cumsum()
-    picos = serie_acumulada.cummax()
-    curva_dd = serie_acumulada - picos
+    picos_lucro = serie_acumulada.cummax()
+    curva_dd = serie_acumulada - picos_lucro
 
     # === DRAWDOWN HISTÓRICO MÁXIMO ===
     max_dd_reais = abs(float(curva_dd.min()))
-    pico_max = float(picos.max())
-
-    max_dd_perc = (
-        float((max_dd_reais / pico_max) * 100)
-        if pico_max and pico_max > 0
-        else 0.0
-    )
+    pico_lucro_max = float(picos_lucro.max())
+    pico_banca_max = float(banca_inicial + pico_lucro_max)
+    max_dd_perc_banca = (float((max_dd_reais / pico_banca_max) * 100) if pico_banca_max > 0 else 0.0)
 
     # === DRAWDOWN ATUAL (MOMENTO PRESENTE) 👉 NOVO BLOCO ===
     ultimo_lucro = float(serie_acumulada.iloc[-1])
-    ultimo_pico = float(picos.iloc[-1])
-    dd_atual_reais = abs(float(ultimo_lucro - ultimo_pico))
+    ultimo_pico_lucro = float(picos_lucro.iloc[-1])
+    ultimo_pico_banca = float(banca_inicial + ultimo_pico_lucro)
+    dd_atual_reais = abs(float(ultimo_lucro - ultimo_pico_lucro))
 
-    dd_atual_perc = (
-        float((dd_atual_reais / ultimo_pico) * 100)
-        if ultimo_pico and ultimo_pico > 0
-        else 0.0
-    )
+    # % Sobre o Pico da Banca Total (Conforme sugerido na Imagem 1)
+    dd_atual_perc_banca = (float((dd_atual_reais / ultimo_pico_banca) * 100) if ultimo_pico_banca > 0 else 0.0)
+
+    # % Sobre o Lucro Histórico
+    dd_atual_perc_lucro = (float((dd_atual_reais / ultimo_pico_lucro) * 100) if ultimo_pico_lucro > 0  else 0.0)
+
     em_dd_agora = dd_atual_reais > 0
 
     # 4. Sequência Máxima de Jogos em Drawdown Contínuo
     em_dd = (curva_dd < 0).astype(int)
     grupos_dd = (em_dd != em_dd.shift()).cumsum() * em_dd
-    jogos_em_dd = (
-        int(grupos_dd.value_counts().drop(0, errors="ignore").max())
-        if (em_dd == 1).any()
-        else 0
-    )
+    jogos_em_dd = ( int(grupos_dd.value_counts().drop(0, errors="ignore").max())
+                    if (em_dd == 1).any()
+                    else 0)
 
     # 5. Sequência Máxima de Reds Consecutivos
-    col_status = (
-        "Resultado_Status"
-        if "Resultado_Status" in df_ord.columns
-        else "Resultado"
-    )
+    col_status = ("Resultado_Status" if "Resultado_Status" in df_ord.columns else "Resultado")
     is_red = (df_ord[col_status] == "Red").astype(int)
     grupos_red = (is_red != is_red.shift()).cumsum() * is_red
-    max_reds = (
-        int(grupos_red.value_counts().drop(0, errors="ignore").max())
-        if (is_red == 1).any()
-        else 0
-    )
+    max_reds = ( int(grupos_red.value_counts().drop(0, errors="ignore").max())
+                if (is_red == 1).any()
+                else 0)
 
     return {
-        "max_dd_reais": max_dd_reais,
-        "max_dd_perc": max_dd_perc,
+       "max_dd_reais": max_dd_reais,
+        "max_dd_perc_banca": max_dd_perc_banca,
+        "pico_banca": ultimo_pico_banca,
+        "pico_lucro": ultimo_pico_lucro,
+        "dd_atual_reais": dd_atual_reais,
+        "dd_atual_perc_banca": dd_atual_perc_banca,  # 👈 Usar este no card
+        "dd_atual_perc_lucro": dd_atual_perc_lucro,
+        "em_dd_agora": em_dd_agora,
         "jogos_em_dd": jogos_em_dd,
         "max_reds_seguidos": max_reds,
-        "pico_historico": pico_max,
-        "dd_atual_reais": dd_atual_reais,  # 👈 Retorno Atual
-        "dd_atual_perc": dd_atual_perc,  # 👈 Retorno Atual
-        "em_dd_agora": em_dd_agora,  # 👈 Retorno Atual
     }

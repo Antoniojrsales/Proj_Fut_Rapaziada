@@ -1,7 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from utils.metrics import metricas_gerais, renderizar_cards_metricas_mercados, calcular_drawdown
+from utils.metrics import metricas_gerais, renderizar_cards_metricas_mercados, calcular_drawdown, radar_gestao
 from utils.auth_check import check_login
 from utils.ui_componentes import render_card
 from utils.processing_data_lay import processar_regras_lay
@@ -158,7 +158,7 @@ with col_red:
 renderizar_cards_metricas_mercados(df_dados)
 
 st.subheader("🔥 Recovery / Recuperação do Drawdown")
-col_recovery, col_vazio, col_vazio, col_vazio, col_vazio = st.columns([1.2, .9, .9, 1, 1])
+col_recovery, col_radar, col_vazio, col_vazio, col_vazio = st.columns([1.2, 1.17, .4, .4, .4])
 with col_recovery:
     pico_banca = cd['pico_banca']
     dd_atual = banca_atual - pico_banca
@@ -196,3 +196,6 @@ with col_recovery:
                     </div>
                     """,
                     unsafe_allow_html=True,)
+
+with col_radar:
+    radar_gestao(df_dados)

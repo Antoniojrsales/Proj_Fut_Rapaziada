@@ -301,3 +301,83 @@ def calcular_drawdown(df: pd.DataFrame,
         "jogos_em_dd": jogos_em_dd,
         "max_reds_seguidos": max_reds,
     }
+
+import pandas as pd
+import streamlit as st
+
+
+def radar_gestao(df: pd.DataFrame, banca_inicial: float = 110.0) -> None:
+    """Renderiza o Semáforo de Risco da Gestão de Banca com base no Drawdown Atual."""
+    dados_radar = calcular_drawdown(df, banca_inicial=banca_inicial)
+
+    if not dados_radar or not dados_radar.get("pico_banca"):
+        st.info("Aguardando partidas finalizadas para ativar o radar de risco.")
+        return
+
+    # Extrai o DD % real em relação à banca
+    dd_perc = dados_radar.get("dd_atual_perc_banca", 0.0)
+    dd_reais = dados_radar.get("dd_atual_reais", 0.0)
+
+    # Regras do Semáforo
+    if dd_perc <= 3.0:
+        cor_badge = "#10B981"  # Verde
+        bg_badge = "rgba(16, 185, 129, 0.2)"
+        icone = "🟢"
+        status = "NORMAL"
+        diretriz = "A estratégia está muito próxima do topo histórico. Operação saudável."
+    elif dd_perc <= 5.0:
+        cor_badge = "#FBBF24"  # Amarelo
+        bg_badge = "rgba(251, 191, 36, 0.2)"
+        icone = "🟡"
+        status = "ATENÇÃO"
+        diretriz = "Reduzir agressividade e observar os próximos resultados com cautela."
+    elif dd_perc <= 10.0:
+        cor_badge = "#FB923C"  # Laranja
+        bg_badge = "rgba(251, 146, 60, 0.2)"
+        icone = "🟠"
+        status = "ALERTA"
+        diretriz = "Reavaliar critérios de seleção, mercados e distribuição de stakes."
+    else:
+        cor_badge = "#F87171"  # Vermelho
+        bg_badge = "rgba(248, 113, 113, 0.2)"
+        icone = "🔴"
+        status = "CRÍTICO"
+        diretriz = (
+            "Não aumentar exposição sob hipótese alguma. Revisar modelo base."
+        )
+
+    # Card Renderizado no padrão Slate Glass
+    st.markdown(
+        f"""
+        <div style="
+            background: linear-gradient(135deg, #2d1b46 0%, #3e2261 100%); 
+            border: 1px solid #475569; 
+            border-radius: 12px; 
+            padding: 16px 20px; 
+            color: #ffffff; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+            margin-bottom: 12px;
+        ">
+            <!-- Cabeçalho do Card -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-weight: 700; font-size: 1rem; color: #cbd5e1; text-transform: uppercase;">
+                    🛡️ Farol de Risco & Saúde da Banca
+                </span>
+                <span style="background-color: {bg_badge}; color: {cor_badge}; font-size: 0.75rem; font-weight: 800; padding: 4px 10px; border-radius: 6px;">
+                    {icone} {status} ({dd_perc:.2f}%)
+                </span>
+            </div>
+            <!-- Diretriz de Ação -->
+            <div style="font-size: 0.95rem; font-weight: 600; color: #f8fafc; margin: 6px 0 10px 0;">
+                {diretriz}
+            </div>
+            <!-- Indicadores Rápidos de Apoio -->
+            <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px; font-size: 0.78rem; color: #94a3b8; display: flex; justify-content: space-between;">
+                <span>DD Atual: <b style="color: {cor_badge};">-R$ {dd_reais:.2f}</b></span>
+                <span>Pico da Banca: <b style="color: #ffffff;">R$ {dados_radar['pico_banca']:.2f}</b></span>
+                <span>Sequência Reds: <b style="color: #ffffff;">{dados_radar['max_reds_seguidos']}</b></span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )

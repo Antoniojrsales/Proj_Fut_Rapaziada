@@ -3,6 +3,8 @@ import numpy as np
 from datetime import datetime
 import streamlit as st
 import plotly.express as px
+import streamlit as st
+
 
 def metricas_gerais(df: pd.DataFrame) -> dict:
     """
@@ -78,7 +80,7 @@ def metricas_gerais(df: pd.DataFrame) -> dict:
     porcentagem_banca = ((lucro_total / BANCA_INICIAL_BASE) * 100 if BANCA_INICIAL_BASE > 0 else 0.0
     )
 
-    media_over05 = df_finalizados[df_finalizados['Mercado'] == 'Over0.5_3porc'].groupby('Stake')['Stake'].sum().mean()
+    media_over05 = df_finalizados[df_finalizados['Mercado'] == 'Over_0.5FT'].groupby('Stake')['Stake'].sum().mean()
 
     return {
         "total_green": total_green,
@@ -301,10 +303,6 @@ def calcular_drawdown(df: pd.DataFrame,
         "jogos_em_dd": jogos_em_dd,
         "max_reds_seguidos": max_reds,
     }
-
-import pandas as pd
-import streamlit as st
-
 
 def radar_gestao(df: pd.DataFrame, banca_inicial: float = 110.0) -> None:
     """Renderiza o Semáforo de Risco da Gestão de Banca com base no Drawdown Atual."""
